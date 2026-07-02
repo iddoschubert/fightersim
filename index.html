@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fighter Sim</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game"></canvas>
+      <div id="hud">
+        <div class="hud-row">
+          <span>HP</span>
+          <strong id="hud-health">200</strong>
+        </div>
+        <div class="hud-row">
+          <span>Coins</span>
+          <strong id="hud-coins">0</strong>
+        </div>
+        <div class="hud-row">
+          <span>Level</span>
+          <strong id="hud-level">1</strong>
+        </div>
+        <div class="hud-row">
+          <span>Enemies</span>
+          <strong id="hud-enemies">0</strong>
+        </div>
+        <div class="hud-row">
+          <span>Jet</span>
+          <strong id="hud-jet">Rustwing Mk I</strong>
+        </div>
+        <div class="hud-row">
+          <span>VP</span>
+          <strong id="hud-vp">0</strong>
+        </div>
+        <div id="radar" aria-label="Enemy radar">
+          <div class="radar-sweep"></div>
+          <div class="radar-center"></div>
+          <div id="radar-blips"></div>
+        </div>
+      </div>
+      <div id="crosshair" aria-hidden="true"></div>
+      <div id="status" class="status"></div>
+      <div id="menu" class="menu hidden">
+        <div class="panel">
+          <h1 id="menu-title">Fighter Sim</h1>
+          <p id="menu-copy"></p>
+          <div id="upgrade-actions" class="actions"></div>
+          <div id="shop" class="shop"></div>
+          <div class="actions">
+            <button id="continue-btn" type="button">Start Mission</button>
+            <button id="multiplayer-btn" type="button">LAN Multiplayer</button>
+            <button id="reset-btn" class="secondary" type="button">Reset Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
