@@ -20,6 +20,7 @@ export class UI {
   readonly multiplayerButton = requireElement("multiplayer-btn") as HTMLButtonElement;
   readonly resetButton = requireElement("reset-btn") as HTMLButtonElement;
   private statusTimer = 0;
+  private radarBlipElements: HTMLDivElement[] = [];
 
   updateHud(args: {
     health: number;
@@ -39,12 +40,22 @@ export class UI {
   }
 
   updateRadar(blips: Array<{ x: number; y: number; far: boolean }>): void {
-    this.radarBlips.replaceChildren();
-    for (const blip of blips) {
+    while (this.radarBlipElements.length < blips.length) {
       const element = document.createElement("div");
+      this.radarBlips.append(element);
+      this.radarBlipElements.push(element);
+    }
+
+    for (let i = 0; i < this.radarBlipElements.length; i += 1) {
+      const element = this.radarBlipElements[i];
+      const blip = blips[i];
+      if (!blip) {
+        element.style.display = "none";
+        continue;
+      }
+      element.style.display = "block";
       element.className = blip.far ? "radar-blip far" : "radar-blip";
       element.style.transform = `translate(calc(-50% + ${blip.x}px), calc(-50% + ${blip.y}px))`;
-      this.radarBlips.append(element);
     }
   }
 

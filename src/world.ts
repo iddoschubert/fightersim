@@ -22,9 +22,15 @@ export class World {
   }
 
   collidesSphere(position: THREE.Vector3, radius: number): boolean {
-    if (position.y < 4) return true;
+    if (position.y - radius <= 0) return true;
     const sphere = new THREE.Sphere(position, radius);
-    return this.obstacles.some((obstacle) => obstacle.box.intersectsSphere(sphere));
+    return this.obstacles.some((obstacle) => {
+      const maxDistance = Math.max(obstacle.size.x, obstacle.size.y, obstacle.size.z) * 0.55 + radius;
+      return (
+        obstacle.center.distanceToSquared(position) <= maxDistance * maxDistance &&
+        obstacle.box.intersectsSphere(sphere)
+      );
+    });
   }
 
   getAvoidance(position: THREE.Vector3, direction: THREE.Vector3, distance: number): THREE.Vector3 {
@@ -80,7 +86,7 @@ export class World {
     const sun = new THREE.DirectionalLight(0xffd08a, 3.25);
     sun.position.set(-120, 180, 110);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.mapSize.set(1024, 1024);
     sun.shadow.camera.left = -360;
     sun.shadow.camera.right = 360;
     sun.shadow.camera.top = 360;
@@ -178,7 +184,9 @@ export class World {
         building.castShadow = true;
         building.receiveShadow = true;
         this.group.add(building);
-        this.addBuildingDetails(building, width, building.geometry.parameters.height, depth, damaged);
+        if (Math.random() < 0.45) {
+          this.addBuildingDetails(building, width, building.geometry.parameters.height, depth, damaged);
+        }
 
         const size = new THREE.Vector3(width, building.geometry.parameters.height, depth);
         const center = building.position.clone();
@@ -198,7 +206,7 @@ export class World {
           this.group.add(cap);
         }
 
-        if (Math.random() < 0.08) {
+        if (Math.random() < 0.045) {
           this.effects.smokeColumn(new THREE.Vector3(building.position.x, size.y + 4, building.position.z));
         }
       }
@@ -221,8 +229,8 @@ export class World {
       transparent: true,
       opacity: damaged ? 0.34 : 0.24
     });
-    const verticalRows = Math.max(2, Math.floor(height / 18));
-    const horizontalRows = Math.max(2, Math.floor(width / 6));
+    const verticalRows = Math.max(2, Math.floor(height / 30));
+    const horizontalRows = Math.max(2, Math.floor(width / 10));
 
     for (const side of [-1, 1]) {
       const facade = new THREE.Group();
@@ -243,23 +251,19 @@ export class World {
       this.group.add(facade);
     }
 
-    if (height > 70 && Math.random() < 0.4) {
+    if (height > 85 && Math.random() < 0.16) {
       const beacon = new THREE.Mesh(
         new THREE.SphereGeometry(1.1, 10, 10),
         new THREE.MeshBasicMaterial({ color: 0xff4b35 })
       );
       beacon.position.set(building.position.x, building.position.y + height / 2 + 2.2, building.position.z);
       this.group.add(beacon);
-
-      const light = new THREE.PointLight(0xff4b35, 0.55, 46);
-      light.position.copy(beacon.position);
-      this.group.add(light);
     }
   }
 
   private addRubble(): void {
     const mat = new THREE.MeshStandardMaterial({ color: 0x403d37, roughness: 1 });
-    for (let i = 0; i < 130; i += 1) {
+    for (let i = 0; i < 80; i += 1) {
       const rubble = new THREE.Mesh(
         new THREE.BoxGeometry(2 + Math.random() * 7, 1 + Math.random() * 5, 2 + Math.random() * 7),
         mat

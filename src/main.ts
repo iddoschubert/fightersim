@@ -43,6 +43,9 @@ class FighterGame {
   private readonly flares: Flare[] = [];
   private readonly enemies: Aircraft[] = [];
   private readonly remotePlayers = new Map<string, Aircraft>();
+  private readonly bulletGeometry = new THREE.CylinderGeometry(0.18, 0.18, 5.2, 9);
+  private readonly playerBulletMaterial = new THREE.MeshBasicMaterial({ color: 0xd7f06a });
+  private readonly enemyBulletMaterial = new THREE.MeshBasicMaterial({ color: 0xff6f4a });
   private readonly temp = {
     v1: new THREE.Vector3(),
     v2: new THREE.Vector3(),
@@ -61,9 +64,14 @@ class FighterGame {
   private localPlayerId = "";
   private websocket: WebSocket | null = null;
   private multiplayerStateTimer = 0;
+  private hudTimer = 0;
+  private radarTimer = 0;
+  private damageSmokeTimer = 0;
+  private damageShakeTimer = 0;
+  private damageShakeCooldown = 0;
 
   constructor() {
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.35));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -175,8 +183,16 @@ class FighterGame {
     }
     this.effects.update(dt);
     this.updateCamera(dt);
-    this.updateHud();
-    this.updateRadar();
+    this.hudTimer += dt;
+    this.radarTimer += dt;
+    if (this.hudTimer >= 0.12) {
+      this.hudTimer = 0;
+      this.updateHud();
+    }
+    if (this.radarTimer >= 0.16) {
+      this.radarTimer = 0;
+      this.updateRadar();
+    }
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -218,6 +234,38 @@ class FighterGame {
     player.fireCooldown = Math.max(0, player.fireCooldown - dt);
     this.flareCooldown = Math.max(0, this.flareCooldown - dt);
     if (this.mode === "campaign" && this.keys.has("KeyQ")) this.tryDropFlare(player);
+    this.updatePlayerDamageEffects(player, dt);
+  }
+
+  private updatePlayerDamageEffects(player: Aircraft, dt: number): void {
+    if (player.health >= 100) {
+      this.damageSmokeTimer = 0;
+      this.damageShakeTimer = 0;
+      this.damageShakeCooldown = 0;
+      return;
+    }
+
+    const damageRatio = THREE.MathUtils.clamp((100 - player.health) / 100, 0, 1);
+    this.damageSmokeTimer -= dt;
+    this.damageShakeCooldown -= dt;
+
+    if (this.damageSmokeTimer <= 0) {
+      const forward = player.getForward(new THREE.Vector3());
+      const up = player.getUp(new THREE.Vector3());
+      const smokePosition = player.position
+        .clone()
+        .addScaledVector(forward, -3.8)
+        .addScaledVector(up, -0.4);
+      this.effects.damageSmoke(smokePosition, forward.multiplyScalar(-8 - damageRatio * 12));
+      this.damageSmokeTimer = THREE.MathUtils.lerp(0.9, 0.28, damageRatio);
+    }
+
+    if (this.damageShakeCooldown <= 0) {
+      this.damageShakeTimer = 0.18 + Math.random() * 0.22;
+      this.damageShakeCooldown = 1.1 + Math.random() * 1.5;
+    }
+
+    this.damageShakeTimer = Math.max(0, this.damageShakeTimer - dt);
   }
 
   private updateEnemies(dt: number): void {
@@ -422,8 +470,8 @@ class FighterGame {
   }): void {
     const direction = args.velocity.clone().normalize();
     const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.18, 0.18, 5.2, 9),
-      new THREE.MeshBasicMaterial({ color: args.color })
+      this.bulletGeometry,
+      args.color === 0xd7f06a ? this.playerBulletMaterial : this.enemyBulletMaterial
     );
     mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction);
     mesh.position.copy(args.position);
@@ -591,6 +639,16 @@ class FighterGame {
       .clone()
       .addScaledVector(forward, -GAME.cameraDistance)
       .addScaledVector(up, GAME.cameraHeight);
+    if (this.damageShakeTimer > 0 && player.health < 100) {
+      const shakeStrength = THREE.MathUtils.clamp((100 - player.health) / 100, 0.25, 1) * 0.75;
+      desired.add(
+        new THREE.Vector3(
+          (Math.random() - 0.5) * shakeStrength,
+          (Math.random() - 0.5) * shakeStrength,
+          (Math.random() - 0.5) * shakeStrength
+        )
+      );
+    }
     this.camera.position.lerp(desired, 1 - Math.exp(-dt * 6));
     this.camera.lookAt(player.position.clone().addScaledVector(forward, 18));
   }
@@ -844,6 +902,7 @@ class FighterGame {
     this.camera.aspect = window.innerWidth / window.innerHeight;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.35));
   }
 }
 
